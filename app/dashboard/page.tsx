@@ -1,8 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDownIcon } from "lucide-react"
 
 const PLANS: Record<string, string[]> = {
   cursor: ["Hobby", "Pro", "Business"],
@@ -22,106 +31,242 @@ type FormValues = {
   plan: string
 }
 
+type SuggestionFormValues = {
+  name: string
+  email: string
+}
+
 export function Dashboard() {
+  const [selectedProvider, setSelectedProvider] = useState("")
+  const [selectedPlan, setSelectedPlan] = useState("")
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false)
+  const [suggestion, setSuggestion] = useState<string | null>(null)
+
   const {
     register,
     handleSubmit,
-    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>()
 
-  const selectedProvider = watch("provider")
-  const plans = selectedProvider ? PLANS[selectedProvider] ?? [] : []
+  const {
+    register: registerSuggestion,
+    handleSubmit: handleSuggestionSubmit,
+    reset: resetSuggestion,
+  } = useForm<SuggestionFormValues>()
 
   function onSubmit(data: FormValues) {
     console.log(data)
   }
 
-  const selectClass =
-    "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30"
+  function onSuggestionSubmit(data: SuggestionFormValues) {
+    // This will be implemented later
+    setSuggestion(
+      `AI Suggestion for ${data.name}: Based on your email ${data.email}, we recommend...`
+    )
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-border bg-card p-6 shadow-sm"
-      >
-        <h2 className="text-base font-semibold text-foreground">Add AI Tool</h2>
-
-        {/* Provider */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Provider</label>
-          <select
-            className={selectClass}
-            {...register("provider", { required: "Select a provider" })}
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Select provider…
-            </option>
-            {Object.entries(PROVIDER_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {errors.provider && (
-            <p className="text-xs text-destructive">{errors.provider.message}</p>
-          )}
-        </div>
-
-        {/* Conditional fields */}
-        {selectedProvider && (
-          <>
-            {/* Team members */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">
-                Number of team members
-              </label>
-              <Input
-                type="number"
-                min={1}
-                placeholder="e.g. 5"
-                {...register("teamMembers", {
-                  required: "Enter team size",
-                  min: { value: 1, message: "Must be at least 1" },
-                  valueAsNumber: true,
-                })}
-                aria-invalid={!!errors.teamMembers}
-              />
-              {errors.teamMembers && (
-                <p className="text-xs text-destructive">{errors.teamMembers.message}</p>
+    <div className="flex min-h-screen flex-col gap-6 p-6">
+      {/* Main Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle>Add AI Tool</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Provider Dropdown */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Provider</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                  >
+                    {selectedProvider
+                      ? PROVIDER_LABELS[selectedProvider]
+                      : "Select provider…"}
+                    <ChevronDownIcon className="size-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {Object.entries(PROVIDER_LABELS).map(([value, label]) => (
+                    <DropdownMenuItem
+                      key={value}
+                      onClick={() => {
+                        setSelectedProvider(value)
+                        setValue("provider", value)
+                        setSelectedPlan("")
+                        setValue("plan", "")
+                      }}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {errors.provider && (
+                <p className="text-xs text-destructive">{errors.provider.message}</p>
               )}
             </div>
 
-            {/* Plan */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Current plan</label>
-              <select
-                className={selectClass}
-                {...register("plan", { required: "Select a plan" })}
-                defaultValue=""
+            {/* Conditional Fields */}
+            {selectedProvider && (
+              <>
+                {/* Team Members Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Number of team members
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 5"
+                    {...register("teamMembers", {
+                      required: "Enter team size",
+                      min: { value: 1, message: "Must be at least 1" },
+                      valueAsNumber: true,
+                    })}
+                    aria-invalid={!!errors.teamMembers}
+                  />
+                  {errors.teamMembers && (
+                    <p className="text-xs text-destructive">
+                      {errors.teamMembers.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Plan Dropdown */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Current plan
+                  </label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
+                        {selectedPlan || "Select plan…"}
+                        <ChevronDownIcon className="size-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      {[
+                        ...(selectedProvider
+                          ? PLANS[selectedProvider] ?? []
+                          : []),
+                      ].map((plan) => (
+                        <DropdownMenuItem
+                          key={plan}
+                          onClick={() => {
+                            setSelectedPlan(plan)
+                            setValue("plan", plan)
+                          }}
+                        >
+                          {plan}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {errors.plan && (
+                    <p className="text-xs text-destructive">{errors.plan.message}</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" className="flex-1">
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSuggestionModal(true)}
               >
-                <option value="" disabled>
-                  Select plan…
-                </option>
-                {plans.map((plan) => (
-                  <option key={plan} value={plan}>
-                    {plan}
-                  </option>
-                ))}
-              </select>
-              {errors.plan && (
-                <p className="text-xs text-destructive">{errors.plan.message}</p>
-              )}
+                Get AI Suggestion
+              </Button>
             </div>
-          </>
-        )}
-
-        <Button type="submit" className="w-full">
-          Save
-        </Button>
+          </CardContent>
+        </Card>
       </form>
+
+      {/* AI Suggestion Modal */}
+      {showSuggestionModal && (
+        <Card className="max-w-sm">
+          <CardHeader>
+            <CardTitle>Get AI Suggestion</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!suggestion ? (
+              <form
+                onSubmit={handleSuggestionSubmit(onSuggestionSubmit)}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Name</label>
+                  <Input
+                    placeholder="Your name"
+                    {...registerSuggestion("name", {
+                      required: "Name is required",
+                    })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    {...registerSuggestion("email", {
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: "Invalid email",
+                      },
+                    })}
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button type="submit" className="flex-1">
+                    Get Suggestion
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowSuggestionModal(false)
+                      setSuggestion(null)
+                      resetSuggestion()
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-foreground">{suggestion}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setShowSuggestionModal(false)
+                    setSuggestion(null)
+                    resetSuggestion()
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
